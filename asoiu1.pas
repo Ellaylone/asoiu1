@@ -2,10 +2,23 @@ Program AirportHelp1;
 uses App, Objects, Views, Drivers, Menus;
 type
 	TAirHelp = object (TApplication)
-	end;
-var AirHelp: TAirHelp; {экземпляр}
+	constructor Init;
+end;
+
+constructor TAirHelp.Init;
+var Window: PWindow; R:TRect;
 begin
-	AirHelp.Init; {конструктор - делает начальные установки}
-	AirHelp.Run; {выполнение - обработка событий}
-	AirHelp.Done; {деструктор - уничтожение объектов}
+	inherited Init; {вызов конструктора предка для установки
+	стандартной прикладной программы}
+	R.Assign(5,3,25,10); {координаты окна}
+	Window:=New(PWindow, Init (R, 'MyWindow', WnNoNumber)); {создание
+	окна:}
+	DeskTop^.Insert(Window); {вставка в панель экрана}
+end;
+
+var AirHelp: TAirHelp;
+begin
+	AirHelp.Init();
+	AirHelp.Run;
+	AirHelp.Done;
 end.
