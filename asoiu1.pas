@@ -57,20 +57,21 @@ type
 
 var AirHelp: TAirHelp;
   data: file of PFlight;
-  test: PFlight;
+  flights, first: PFlight;
           procedure writeFlight();
 begin
-     new(test);
-     test^.Id := 1;
-     test^.Price := 10;
-     test^.Date := '01.01.1990';
-     test^.FromPoint := 'kurgan';
-     test^.ToPoint := 'tomsk';
-     test^.Time := '18:00';
-     test^.Next := nil;
+     // connect with other flights
+     new(flights);
+     flights^.Id := 1;
+     flights^.Price := 10;
+     flights^.Date := '01.01.1990';
+     flights^.FromPoint := 'kurgan';
+     flights^.ToPoint := 'tomsk';
+     flights^.Time := '18:00';
+     flights^.Next := nil;
      Assign(data, 'data');
      reset(data);
-     write(data, test);
+     write(data, flights);
      CloseFile(data);
 end;
 procedure readFlight();
@@ -79,26 +80,26 @@ begin
      reset(data);
      while not eof(data) do
            begin
-             Read(data, test);
+             Read(data, flights);
            end;
-     writeln(test^.Id, test^.Price, test^.Date);
+     writeln(flights^.Id, flights^.Price, flights^.Date);
      CloseFile(data);
 end;
 procedure findFlight();
 begin
      // идти по порядку
-     if test^.Date = '01.01.1990' then begin
-        writeln(test^.Date);
+     if flights^.Date = '01.01.1990' then begin
+        writeln(flights^.Date);
      end;
 end;
 begin
-//	AirHelp.Init();
+	AirHelp.Init();
   //      AirHelp.NewWindow();
-//	AirHelp.Run;
-//	AirHelp.Done;
-        writeFlight();
-        readFlight();
-        writeln();
-        findFlight();
-        readln();
+	AirHelp.Run;
+	AirHelp.Done;
+        //writeFlight();
+        //readFlight();
+        //writeln();
+        //findFlight();
+        //readln();
 end.

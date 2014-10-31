@@ -2,9 +2,10 @@ unit flightWindows;
 interface
 uses App, Objects, Drivers, Menus, Views;
 const
-cmNewFlight = 199;
-cmFindFlight = 200;
-cmNewWin = 201;
+cmListFlights = 199;
+cmNewFlight = 200;
+cmFindFlight = 201;
+cmNewWin = 202;
 WinCounter: Integer = 0;
 type
 	TAirHelp = object (TApplication)
@@ -78,12 +79,13 @@ procedure TAirHelp.InitMenuBar;
                                                    меню }
          NewSubMenu('~F~lights', hcNoContext, NewMenu(    { определить
                                                          меню }
-           NewItem('~N~ew flight', 'F3', kbF3, cmNewFlight, hcNoContext,
-           NewItem('F~i~nd flight', 'F4', kbF3, cmFindFlight, hcNoContext,
+           NewItem('List flights', 'F3', kbF3, cmListFlights, hcNoContext,
+           NewItem('New flight', 'F4', kbF4, cmNewFlight, hcNoContext,
+           NewItem('Find flight', 'F5', kbF5, cmFindFlight, hcNoContext,
            NewLine(
            NewItem('E~x~it', 'Alt-X', kbAltX, cmQuit, hcNoContext,
                                                      { элемент }
-           nil))))),          { больше нет элементов }
+           nil)))))),          { больше нет элементов }
          nil)              { больше нет подменю }
        )));                { конец полосы }
      end;
