@@ -6,11 +6,15 @@ cmNewFlight = 200;
 cmFindFlight = 201;
 cmNewWin = 202;
 WinCounter: Integer = 0;
+ListWindow: integer = 0;
+AddWindow: integer = 0;
+SearchWindow: integer = 0;
 type
 	TAirHelp = object (TApplication)
         procedure InitStatusLine; virtual;
         procedure InitMenuBar; virtual;
         procedure NewWindow; virtual;
+        procedure ListFlightsWindow; virtual;
         procedure HandleEvent (var Event: TEvent) ; virtual;
 //	constructor Init;
 end;
@@ -35,6 +39,8 @@ end;
         var AirHelp: TAirHelp;
   data: file of PFlight;
   flights, first: PFlight;
+  LineCount: integer;
+//  TDrawBuffer = array[0MaxViewWidth-1] of Word;
   procedure writeFlight();
 begin
      // connect with other flights
@@ -55,11 +61,13 @@ procedure readFlight();
 begin
      Assign(data, 'data');
      reset(data);
+     LineCount := 0;
      while not eof(data) do
            begin
              Read(data, flights);
+             LineCount := LineCount + 1;
            end;
-     writeln(flights^.Id, flights^.Price, flights^.Date);
+      writeln(flights^.Id, flights^.Price, flights^.Date);
      CloseFile(data);
 end;
 procedure findFlight();
@@ -80,6 +88,19 @@ begin
   R.Move(Random(58), Random(16));  { случайное перемещение по
                                      экрану }
   Window := New(PFlightWindow, Init(R, 'Demo Window', WinCounter));
+  // Window.Insert('asd')
+  DeskTop^.Insert(Window);     { вывести окно на панель экрана }
+end;
+procedure TAirHelp.ListFlightsWindow;
+var
+  Window: PFlightWindow;
+  R: TRect;
+begin
+  Inc(WinCounter);
+  ListWindow := WinCounter;
+  R.Assign(1, 1, 80, 25);       { установка начального размера и
+                                 позиции }
+  Window := New(PFlightWindow, Init(R, 'Flights', WinCounter));
   // Window.Insert('asd')
   DeskTop^.Insert(Window);     { вывести окно на панель экрана }
 end;
@@ -126,7 +147,7 @@ procedure TAirHelp.InitMenuBar;
                                                    меню }
          NewSubMenu('~F~lights', hcNoContext, NewMenu(    { определить
                                                          меню }
-           NewItem('List flights', 'F3', kbF3, cmListFlights, hcNoContext,
+           NewItem('List(refresh) flights', 'F3', kbF3, cmListFlights, hcNoContext,
            NewItem('New flight', 'F4', kbF4, cmNewFlight, hcNoContext,
            NewItem('Find flight', 'F5', kbF5, cmFindFlight, hcNoContext,
            NewLine(
@@ -141,14 +162,42 @@ begin
   TView.Init(Bounds);
   GrowMode := gfGrowHiX + gfGrowHiY;
 end;
-procedure TInterior.Draw;      { это выглядит безобразно! }
+procedure TInterior.Draw;
 var
+  Color: Byte;
   Y: Integer;
+  B: TDrawBuffer;
+  ColWidth, LastColWidth: integer;
 begin
-  // for Y := 0 to Size.Y - 1 do  { простой счетчик строк }
-
+  Color := GetColor(1);
+  flights := first;
+  Y := 0;
+  ColWidth := Size.X div 6;
+  LastColWidth := Size.X - (ColWidth * 5);
+  MoveChar(B, ' ', Color, Size.X);
+  MoveStr(B, Copy('Id', 1, ColWidth), Color);
+    WriteLine(0, Y, ColWidth, 1, B);
+    MoveStr(B, Copy('|From', 1, ColWidth), Color);
+    WriteLine(ColWidth, Y, ColWidth, 1, B);
+        MoveStr(B, Copy('|Dest', 1, ColWidth), Color);
+    WriteLine(ColWidth * 2, Y, ColWidth, 1, B);
+        MoveStr(B, Copy('|Date', 1, ColWidth), Color);
+    WriteLine(ColWidth * 3, Y, ColWidth, 1, B);
+        MoveStr(B, Copy('|Time', 1, ColWidth), Color);
+    WriteLine(ColWidth * 4, Y, ColWidth, 1, B);
+        MoveStr(B, Copy('|Price', 1, ColWidth), Color);
+    WriteLine(ColWidth * 5, Y, LastColWidth, 1, B);
+  for Y := 1 to Size.Y - 1 do
   begin
-    WriteStr(0, Y, 'test', $01);   { вывод каждой строки }
+    MoveChar(B, ' ', Color, Size.X); { заполняет строку пробелами }
+//    MoveStr(B, Copy('', 1, Size.X), Color);
+    WriteLine(0, Y, Size.X, 1, B);
+{    if (Y < LineCount) and (flights <> nil) then
+      MoveStr(B, Copy(flights^.FromPoint, 1, Size.X), Color);
+    WriteLine(0, Y, Size.X, 1, B);
+    //flights := flights^.Next;
+    }
+
   end;
 end;
 constructor TFlightWindow.Init(Bounds: TRect; WinTitle: String;
@@ -157,6 +206,7 @@ var
   S: string[3];
   Interior: PInterior;
 begin
+  writeln(WindowNo);
   Str(WindowNo, S);        { устанавливает номер окна в заголовке }
   TWindow.Init(Bounds, WinTitle + ' ' + S, wnNoNumber);
   GetClipRect(Bounds);
@@ -166,13 +216,15 @@ begin
 end;
 
 begin
+        //readFlight();
 	AirHelp.Init();
         AirHelp.NewWindow();
+                AirHelp.ListFlightsWindow();
 	AirHelp.Run;
 	AirHelp.Done;
-        //writeFlight();
-        //readFlight();
+//       writeFlight();
+//        readFlight();
         //writeln();
         //findFlight();
-        //readln();
+  //      readln();
 end.
