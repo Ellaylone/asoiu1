@@ -14,6 +14,8 @@ type
 	procedure ListFlights; virtual;
 	procedure NewFlight; virtual;
 	procedure FindFlight; virtual;
+	procedure AddFlightAction; virtual;
+        procedure FindFlightAction; virtual;
 	procedure HandleEvent(var Event: TEvent); virtual;
 	constructor Init;
 end;
@@ -39,7 +41,25 @@ type
 		FromPoint, ToPoint, Date, Time: String;
 		Next:PFlight;
 end;
-var FlightAppl: TMyAppl;
+type
+        FindData = record
+                Field: Word;
+                Value: string[128];
+        end;
+type
+        AddData = record
+                Date: string[128];
+                Time: string[128];
+                Price: string[128];
+                Start: string[128];
+                Dest: string[128];
+        end;
+var
+        FlightAppl: TMyAppl;
+        data: file of PFlight;
+        flights, first: PFlight;
+        Find: FindData;
+        Add: AddData;
 procedure TMyAppl.InitStatusLine;
 	var R: TRect;                 { хранит границы строки статуса }
 	begin
@@ -78,17 +98,9 @@ procedure TMyAppl.InitMenuBar;
 		)));                { конец полосы }
 	end;
 constructor TMyAppl.Init;
-	var
-		FlightList: PListWindow;
-		R:TRect;
 	begin
 		inherited Init; {вызов конструктора предка для установки
 		 стандартной прикладной программы}
-		R.Assign(5,3,25,10); {координаты окна}
-		FlightList:=New(PListWindow, Init (R, 'Flight List', WnNoNumber)); {создание
-		окна:}
-		DeskTop^.Insert(FlightList); {вставка в панель экрана}
-		// DeskTop^.Insert(Window); {вставка в панель экрана}
 	end;
 constructor TListWindow.Init (Bounds: TRect; WinTitle: String; WinNo: Integer);
 	var
@@ -171,35 +183,62 @@ Insert(New (PButton, Init (R, '~F~ind', cmFindFlight, bfDefault)));
 end;
 
 procedure TMyAppl.ListFlights;
-	var
-		Dialog: PDialog;
-		R: TRect;
+var
+		FlightList: PListWindow;
+		R:TRect;
 	begin
-		R.Assign(0, 0, 40, 13);
-		R.Move(Random(39), Random(10));
-		Dialog := New(PDialog, Init(R, 'Add Flight'));
-		DeskTop^.Insert(Dialog);
-	end;
+  		R.Assign(1, 1, 80, 25);
+		FlightList:=New(PListWindow, Init (R, 'Flight List', WnNoNumber)); {создание
+		окна:}
+		DeskTop^.Insert(FlightList); {вставка в панель экрана}
+end;
 procedure TMyAppl.NewFlight;
 	var
 		Dialog: PAddDialog;
 		R: TRect;
+                Control: Word;
 	begin
 		R.Assign(0, 0, 40, 13);
 		R.Move(Random(39), Random(10));
 		Dialog := New(PAddDialog, Init(R, 'Add Flight'));
-		DeskTop^.Insert(Dialog);
+		Dialog^.SetData(Add);
+                Control := DeskTop^.ExecView(Dialog);
+                if Control <> cmCancel then Dialog^.GetData(Add);
+                AddFlightAction();
 	end;
 procedure TMyAppl.FindFlight;
 	var
 		Dialog: PFindDialog;
 		R: TRect;
+                Control: Word;
 	begin
 		R.Assign(0, 0, 33, 15);
 		R.Move(Random(39), Random(10));
 		Dialog := New(PFindDialog, Init(R, 'Find Flight'));
-		DeskTop^.Insert(Dialog);
+                Dialog^.SetData(Find);
+                Control := DeskTop^.ExecView(Dialog);
+                if Control <> cmCancel then Dialog^.GetData(Find);
+                FindFlightAction();
 	end;
+procedure TMyAppl.AddFlightAction;
+begin
+     //new(flights);
+     //flights^.Id := 1;
+     //flights^.Price := 10;
+     //flights^.Date := '01.01.1990';
+     //flights^.FromPoint := 'kurgan';
+     //flights^.ToPoint := 'tomsk';
+     //flights^.Time := '18:00';
+     //flights^.Next := nil;
+     //Assign(data, 'data');
+     //reset(data);
+     //write(data, flights);
+     //CloseFile(data);
+end;
+procedure TMyAppl.FindFlightAction;
+begin
+
+end;
 
 procedure TMyAppl.HandleEvent(var Event: TEvent);
 	begin
@@ -210,6 +249,8 @@ procedure TMyAppl.HandleEvent(var Event: TEvent);
 				cmListFlights: ListFlights;
 				cmAddDialog: NewFlight;
 				cmSearchDialog: FindFlight;
+                                cmAddFlight: AddFlightAction;
+                                cmFindFlight: FindFlightAction;
 			else
 				Exit;
 			end;
