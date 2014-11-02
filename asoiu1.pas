@@ -33,10 +33,51 @@ type
 	constructor Init (var Bounds: TRect; WinTitle: String);
 end;
 type
-        PFlight = ^TFlight;
-	TFlight = record
-		Id, Price: integer;
-		FromPoint, ToPoint, Date, Time: String;
+	PFlight = ^TFlight;
+ TFlight = object(TObject)
+  Id, Price, Frompoint, Topoint, Date, Time: PShortString;
+  Constructor Init(i, p, f, t, d, tm: String);
+  destructor Done; virtual;
+  constructor Load(S:TDosStream);
+  procedure Store(S:TDosStream);
+end;
+Constructor TFlight.Init(i, p, f, t, d, tm: String);
+begin
+     Id:= NewStr(i);
+     Price:= NewStr(p);
+     Frompoint:= NewStr(f);
+     Topoint:= NewStr(t);
+     Date:= NewStr(d);
+     Time:= NewStr(tm);
+end;
+ 
+constructor TFlight.Load(S:TDosStream);
+begin
+	Id := S.ReadStr;
+	Price := S.ReadStr;
+	Frompoint := S.ReadStr;
+	Topoint := S.ReadStr;
+	Date := S.ReadStr;
+	Time := S.ReadStr;
+end;
+ 
+procedure TFlight.Store(S:TDosStream);
+begin
+	S.Write(Id, sizeof(id));
+	S.Write(Price, sizeof(price));
+	S.Write(Frompoint, sizeof(frompoint));
+	S.Write(Topoint, sizeof(topoint));
+	S.Write(Date, sizeof(date));
+	S.Write(Time, sizeof(time));
+end;
+destructor TFlight.Done;
+begin
+	dispose(Id);
+	dispose(Price);
+	dispose(FromPoint);
+	dispose(ToPoint);
+	dispose(Date);
+	dispose(Time);
 end;
 type
         FindData = record
@@ -239,12 +280,12 @@ var
         Data : PDosStream;
 begin
         new(flights);
-             flights^.Id := 1;
-             flights^.Price := 10;
-             flights^.Date := '01.01.1990';
-             flights^.FromPoint := 'kurgan';
-             flights^.ToPoint := 'tomsk';
-             flights^.Time := '18:00';
+        //      flights^.Id := 1;
+        //      flights^.Price := 10;
+        //      flights^.Date := '01.01.1990';
+        //      flights^.FromPoint := 'kurgan';
+        //      flights^.ToPoint := 'tomsk';
+        //      flights^.Time := '18:00';
              //flights^.Next := nil;
              //Assign(data, 'data');
              //reset(data);
