@@ -4,8 +4,6 @@ const
 	cmListFlights = 199;
 	cmAddDialog = 200;
 	cmSearchDialog = 201;
-	cmAddFlight = 202;
-	cmFindFlight = 203;
 	cmNewWin = 204;
 type
 	TMyAppl = object (TApplication)
@@ -43,7 +41,7 @@ type
 end;
 type
         FindData = record
-                Field: Word;
+                Field: integer;
                 Value: string[128];
         end;
 type
@@ -99,8 +97,20 @@ procedure TMyAppl.InitMenuBar;
 	end;
 constructor TMyAppl.Init;
 	begin
-		inherited Init; {вызов конструктора предка для установки
-		 стандартной прикладной программы}
+		inherited Init;
+                with Find do
+  begin
+    Field := 0;
+    Value := 'Phone home';
+  end;
+                with Add do
+  begin
+    Date:= 'asd';
+                Time:= '11';
+                Price:= '22';
+                Start:= '33';
+                Dest:= '44';
+  end;
 	end;
 constructor TListWindow.Init (Bounds: TRect; WinTitle: String; WinNo: Integer);
 	var
@@ -154,7 +164,7 @@ Insert(New(PLabel,Init(R,'Destination',B))); {создание и вставка
 
 R.Assign(15,10,25,12); {координаты командной кнопки}
  {создание и вставка кнопки}
-Insert(New (PButton, Init (R, '~A~dd Flight', cmAddFlight, bfDefault)));
+Insert(New (PButton, Init (R, '~A~dd Flight', cmOk, bfDefault)));
 
 end;
 constructor TFindDialog.Init (var Bounds: TRect; WinTitle: String);
@@ -178,7 +188,7 @@ B:=New(PInputLine,Init(R,128)); {создание строки ввода}
 Insert(B); {вставка строки ввода}
 R.Assign(8,12,26,14); {координаты командной кнопки}
  {создание и вставка кнопки}
-Insert(New (PButton, Init (R, '~F~ind', cmFindFlight, bfDefault)));
+Insert(New (PButton, Init (R, '~F~ind', cmOk, bfDefault)));
 
 end;
 
@@ -249,8 +259,6 @@ procedure TMyAppl.HandleEvent(var Event: TEvent);
 				cmListFlights: ListFlights;
 				cmAddDialog: NewFlight;
 				cmSearchDialog: FindFlight;
-                                cmAddFlight: AddFlightAction;
-                                cmFindFlight: FindFlightAction;
 			else
 				Exit;
 			end;
