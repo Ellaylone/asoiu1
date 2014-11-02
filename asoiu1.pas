@@ -41,6 +41,13 @@ type
   constructor Load(S:TDosStream);
   procedure Store(S:TDosStream);
 end;
+const
+RFlight: TStreamRec =(
+	ObjType: 151;
+	VmtLink: Ofs(TypeOf(TFlight)^);
+	Load: @TFlight.Load;
+	Store: @TFlight.Store);
+
 Constructor TFlight.Init(i, p, f, t, d, tm: String);
 begin
      Id:= NewStr(i);
@@ -98,6 +105,8 @@ var
         flights, first: PFlight;
         Find: FindData;
         Add: AddData;
+        SaveFile: TDosStream;
+        FlightCollection: PCollection;
 procedure TMyAppl.InitStatusLine;
 	var R: TRect;                 { хранит границы строки статуса }
 	begin
@@ -136,8 +145,24 @@ procedure TMyAppl.InitMenuBar;
 		)));                { конец полосы }
 	end;
 constructor TMyAppl.Init;
+var f:text;
 	begin
 		inherited Init;
+		RegisterType(RCollection);
+		 RegisterType(RFlight);
+		 assign(f,'data.txt');
+		 rewrite(f);
+		 system.close(f);
+		 FlightCollection := new(PCollection,Init(10,6));
+		 FlightCollection^.Insert(New(PFlight,Init('1','2','3','4','5','6')));
+		 SaveFile.Init('data.txt',stOpenRead);
+		 FlightCollection := PCollection(SaveFile.Get);
+		 SaveFile.Done;
+		 if SaveFile.Status <> 0 then
+		  begin
+		  SaveFile.Init('data.txt',stCreate);
+		  SaveFile.Done;
+		  end;
                 with Find do
   begin
     Field := 0;
@@ -236,7 +261,14 @@ procedure TMyAppl.ListFlights;
 var
 		FlightList: PListWindow;
 		R:TRect;
+		f: text;
+	    procedure PrintFlight(P: PFlight); far;
+	    begin
+	     with P^ do
+	      writeln(f,id^+' '+Date^+' '+Time^+' '+Price^+' '+FromPoint^+' '+ToPoint^);
+	    end;
 	begin
+		FlightCollection^.ForEach(@PrintFlight);
   		R.Assign(1, 1, 80, 25);
 		FlightList:=New(PListWindow, Init (R, 'Flight List', WnNoNumber)); {создание
 		окна:}
@@ -276,31 +308,12 @@ procedure TMyAppl.FindFlight;
                 end;
 	end;
 procedure TMyAppl.AddFlightAction;
-var
-        Data : PDosStream;
 begin
-        new(flights);
-        //      flights^.Id := 1;
-        //      flights^.Price := 10;
-        //      flights^.Date := '01.01.1990';
-        //      flights^.FromPoint := 'kurgan';
-        //      flights^.ToPoint := 'tomsk';
-        //      flights^.Time := '18:00';
-             //flights^.Next := nil;
-             //Assign(data, 'data');
-             //reset(data);
-             //write(data, flights);
-             //CloseFile(data);
-             Data := new(PDosStream, Init('data', stOpenWrite));
-             Data^.Write(flights, sizeof(flights));
-             Data^.Close;
+        FlightCollection^.Insert(new(PFlight,Init('10',Add.Date,Add.Time,Add.Price,Add.Start,Add.Dest)));
 end;
 procedure TMyAppl.FindFlightAction;
-var
-        Data : PDosStream;
 begin
-      Data := new(PDosStream, Init('data', stOpenRead));
-             Data^.Close;
+    
 end;
 
 procedure TMyAppl.HandleEvent(var Event: TEvent);
