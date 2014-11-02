@@ -37,7 +37,6 @@ type
 	TFlight = record
 		Id, Price: integer;
 		FromPoint, ToPoint, Date, Time: String;
-		Next:PFlight;
 end;
 type
         FindData = record
@@ -213,41 +212,54 @@ procedure TMyAppl.NewFlight;
 		Dialog := New(PAddDialog, Init(R, 'Add Flight'));
 		Dialog^.SetData(Add);
                 Control := DeskTop^.ExecView(Dialog);
-                if Control <> cmCancel then Dialog^.GetData(Add);
-                AddFlightAction();
+                if Control <> cmCancel then begin
+                        Dialog^.GetData(Add);
+                        TMyAppl.AddFlightAction;
+                end;
 	end;
 procedure TMyAppl.FindFlight;
 	var
 		Dialog: PFindDialog;
 		R: TRect;
                 Control: Word;
+                Data : PDosStream;
 	begin
 		R.Assign(0, 0, 33, 15);
 		R.Move(Random(39), Random(10));
 		Dialog := New(PFindDialog, Init(R, 'Find Flight'));
                 Dialog^.SetData(Find);
                 Control := DeskTop^.ExecView(Dialog);
-                if Control <> cmCancel then Dialog^.GetData(Find);
-                FindFlightAction();
+                if Control <> cmCancel then begin
+                        Dialog^.GetData(Find);
+                        TMyAppl.FindFlightAction;
+                end;
 	end;
 procedure TMyAppl.AddFlightAction;
+var
+        Data : PDosStream;
 begin
-     //new(flights);
-     //flights^.Id := 1;
-     //flights^.Price := 10;
-     //flights^.Date := '01.01.1990';
-     //flights^.FromPoint := 'kurgan';
-     //flights^.ToPoint := 'tomsk';
-     //flights^.Time := '18:00';
-     //flights^.Next := nil;
-     //Assign(data, 'data');
-     //reset(data);
-     //write(data, flights);
-     //CloseFile(data);
+        new(flights);
+             flights^.Id := 1;
+             flights^.Price := 10;
+             flights^.Date := '01.01.1990';
+             flights^.FromPoint := 'kurgan';
+             flights^.ToPoint := 'tomsk';
+             flights^.Time := '18:00';
+             //flights^.Next := nil;
+             //Assign(data, 'data');
+             //reset(data);
+             //write(data, flights);
+             //CloseFile(data);
+             Data := new(PDosStream, Init('data', stOpenWrite));
+             Data^.Write(flights, sizeof(flights));
+             Data^.Close;
 end;
 procedure TMyAppl.FindFlightAction;
+var
+        Data : PDosStream;
 begin
-
+      Data := new(PDosStream, Init('data', stOpenRead));
+             Data^.Close;
 end;
 
 procedure TMyAppl.HandleEvent(var Event: TEvent);
