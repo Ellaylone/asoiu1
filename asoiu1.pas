@@ -4,7 +4,6 @@ const
 	cmListFlights = 199;
 	cmAddDialog = 200;
 	cmSearchDialog = 201;
-	cmNewWin = 204;
 type
 	TMyAppl = object (TApplication)
 	FlightCollection: PCollection;
@@ -13,8 +12,6 @@ type
 	procedure ListFlights; virtual;
 	procedure NewFlight; virtual;
 	procedure FindFlight; virtual;
-	procedure AddFlightAction; virtual;
-    procedure FindFlightAction; virtual;
     procedure printFlights; virtual;
 	procedure HandleEvent(var Event: TEvent); virtual;
 	constructor Init;
@@ -103,8 +100,6 @@ type
         end;
 var
         FlightAppl: TMyAppl;
-        data: file of PFlight;
-        flights, first: PFlight;
         Find: FindData;
         Add: AddData;
         SaveFile: TDosStream;
@@ -146,17 +141,19 @@ procedure TMyAppl.InitMenuBar;
 		)));
 	end;
 constructor TMyAppl.Init;
-var f:text;
 	begin
 		inherited Init;
                 RegisterType(RFlight);
 		MessageBox ('Start', nil, mfOkButton);
-                SaveFile.Init('Flights.res', stOpenRead);
+                SaveFile.Init('Flight.res', stOpenRead);
                 FlightCollection := PCollection(SaveFile.Get);
+                MessageBox('1', nil, mfOkButton);
                 if SaveFile.Status <> stOk then
                 begin
+                                MessageBox('2', nil, mfOkButton);
                     SaveFile.Done;
                     SaveFile.Init('Flight.res', stCreate);
+                    if SaveFile.Status <> stOk then MessageBox('Creation Error', nil, mfOkButton);
                     FlightCollection := New(PCollection, Init(10, 5));
                     FlightCollection^.Insert(New(PFlight, Init('1','2','3','4','5','6')));
                 end;
@@ -179,15 +176,22 @@ var f:text;
 procedure TMyAppl.printFlights;
 var
 	F: text;
+        i: integer;
 	procedure printFlight(P: PFlight); far;
 	begin
-                Assign(F, 'DATA.TXT');
+                Inc(i);
 		With P^ do
-		writeln(f, Id^+' '+Price^+' '+FromPoint^+' '+ToPoint^+' '+Date^+' '+Time^);
+                write(F, Id^+' '+Price^+' '+FromPoint^+' '+ToPoint^+' '+Date^+' '+Time^);
+                if FlightCollection^.Count <> i then begin
+                  writeln(F,'');
+                end;
 	end;
 begin
-	FlightCollection^.ForEach(@printFlight);
-	Close(F);
+    Assign(F, 'DATA.TXT');
+        Rewrite(F);
+        i := 0;
+    	FlightCollection^.ForEach(@printFlight);
+    	Close(F);
 end;
 constructor TListWindow.Init (Bounds: TRect; WinTitle: String; WinNo: Integer);
 	var
@@ -207,11 +211,13 @@ constructor TListWindow.Init (Bounds: TRect; WinTitle: String; WinNo: Integer);
                 Reset(F);
                 AssignDevice(Buff, Term);
                 Rewrite(Buff);
+                MessageBox('cycle', nil, mfOkButton);
                 while not eof(F) do
-                begin
-                     Read(F, temp);
-                     Writeln(Buff, temp);
-                end;
+                                begin
+                                     Read(F, temp);
+                                     if temp[0] <> '' then Writeln(Buff, temp);
+                                end;
+                                MessageBox('cycle done', nil, mfOkButton);
                 Insert(Term);
                 system.close(F);
 	end;
@@ -290,8 +296,8 @@ var
 		f: text;
 	begin
 		R.Assign(1, 1, 80, 24);
+		TMyAppl.printFlights;
 		FlightList:=New(PListWindow, Init (R, 'Flight List', WnNoNumber));
-
 		DeskTop^.Insert(FlightList);
 end;
 procedure TMyAppl.NewFlight;
@@ -325,22 +331,14 @@ procedure TMyAppl.FindFlight;
                 Control := DeskTop^.ExecView(Dialog);
                 if Control <> cmCancel then begin
                         Dialog^.GetData(Find);
-                        TMyAppl.FindFlightAction;
                 end;
 	end;
-procedure TMyAppl.AddFlightAction;
-begin
-
-end;
-procedure TMyAppl.FindFlightAction;
-begin
-
-end;
 destructor TMyAppl.Done;
 begin
-     {inherited Done;}
-     SaveFile.Init('Client.res', stOpenWrite);
+     SaveFile.Init('Flight.res', stOpenWrite);
+     if SaveFile.Status <> stOk then MessageBox('Open Flight.res for write failed', nil, mfOkButton);
      SaveFile.Put(FlightCollection);
+     if SaveFile.Status = stPutError then MessageBox('Flight.res put collection failed', nil, mfOkButton);
      SaveFile.Done;
 end;
 
