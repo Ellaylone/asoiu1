@@ -12,7 +12,8 @@ type
 	procedure ListFlights; virtual;
 	procedure NewFlight; virtual;
 	procedure FindFlight; virtual;
-    procedure printFlights; virtual;
+    procedure PrintFlights; virtual;
+    procedure SearchFlights; virtual;
 	procedure HandleEvent(var Event: TEvent); virtual;
 	constructor Init;
         destructor Done; virtual;
@@ -173,11 +174,11 @@ constructor TMyAppl.Init;
                 Dest:= '44';
   end;
 	end;
-procedure TMyAppl.printFlights;
+procedure TMyAppl.PrintFlights;
 var
 	F: text;
         i: integer;
-	procedure printFlight(P: PFlight); far;
+	procedure PrintFlight(P: PFlight); far;
 	begin
                 Inc(i);
 		With P^ do
@@ -190,8 +191,46 @@ begin
     Assign(F, 'DATA.TXT');
         Rewrite(F);
         i := 0;
-    	FlightCollection^.ForEach(@printFlight);
+    	FlightCollection^.ForEach(@PrintFlight);
     	Close(F);
+end;
+procedure TMyAppl.SearchFlights;
+var
+	FoundFlight: PFlight;
+	temp: string;
+	function SearchFlight(P: PFlight):Boolean; far;
+	begin
+		Case Find.Field of
+			0: 	begin
+					temp := P^.Id^;
+				end;
+			1: 	begin
+					temp := P^.Price^;
+				end;
+			2: 	begin
+					temp := P^.FromPoint^;
+				end;
+			3: 	begin
+					temp := P^.ToPoint^;
+				end;
+			4: 	begin
+					temp := P^.Date^;
+				end;
+			5: 	begin
+					temp := P^.Time^;
+				end;
+		end;
+		SearchFlight := Pos(Find.Value, Temp)<>0;
+	end;
+begin
+    	FoundFlight := FlightCollection^.FirstThat(@SearchFlight);
+    	if FoundFlight = NIL then begin
+    		MessageBox('Not fount', nil, mfOkButton);
+    	end else begin
+                temp := FoundFlight^.Id^+' '+FoundFlight^.Price^+' '+FoundFlight^.FromPoint^+' ';
+                temp := temp + FoundFlight^.ToPoint^+' '+FoundFlight^.Date^+' '+FoundFlight^.Time^;
+    		MessageBox(temp, nil, mfOkButton);
+    	end;
 end;
 constructor TListWindow.Init (Bounds: TRect; WinTitle: String; WinNo: Integer);
 	var
@@ -271,11 +310,11 @@ inherited Init (Bounds,WinTitle);
 R.Assign(3,3,30,9);
 B:= New (PRadioButtons, Init (R,
  NewSItem ('Id',
+ NewSItem ('Price',
  NewSItem ('Starting location',
  NewSItem ('Destination',
  NewSItem ('Date',
  NewSItem ('Time',
- NewSItem ('Price',
  Nil))))))));
 Insert(B);
 R.Assign(3,1,10,2);
@@ -296,7 +335,7 @@ var
 		f: text;
 	begin
 		R.Assign(1, 1, 80, 24);
-		TMyAppl.printFlights;
+		TMyAppl.PrintFlights;
 		FlightList:=New(PListWindow, Init (R, 'Flight List', WnNoNumber));
 		DeskTop^.Insert(FlightList);
 end;
@@ -331,13 +370,24 @@ procedure TMyAppl.FindFlight;
                 Control := DeskTop^.ExecView(Dialog);
                 if Control <> cmCancel then begin
                         Dialog^.GetData(Find);
+                        TMyAppl.SearchFlights;
                 end;
 	end;
 destructor TMyAppl.Done;
+var
+   i:integer;
+   procedure SaveFlight(P: PFlight); far;
+   begin
+        With P^ do
+        MessageBox('writing '+Id^+' '+Price^, nil, mfOkButton);
+        SaveFile.Put(P);
+        if SaveFile.Status <> stOk then MessageBox('Failed to write', nil, mfOkButton);
+   end;
 begin
      SaveFile.Init('Flight.res', stOpenWrite);
      if SaveFile.Status <> stOk then MessageBox('Open Flight.res for write failed', nil, mfOkButton);
-     SaveFile.Put(FlightCollection);
+{     SaveFile.Put(FlightCollection);}
+     FlightCollection^.ForEach(@SaveFlight);
      if SaveFile.Status = stPutError then MessageBox('Flight.res put collection failed', nil, mfOkButton);
      SaveFile.Done;
 end;
