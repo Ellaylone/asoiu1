@@ -1,5 +1,5 @@
 Program FlightLIst;
-uses App, Objects, Views, Drivers, Menus, Dialogs;
+uses App, Objects, Views, Drivers, Menus, Dialogs, MsgBox;
 const
 	cmListFlights = 199;
 	cmAddDialog = 200;
@@ -7,13 +7,14 @@ const
 	cmNewWin = 204;
 type
 	TMyAppl = object (TApplication)
+	FlightCollection: PCollection;
 	procedure InitStatusLine; virtual;
 	procedure InitMenuBar; virtual;
 	procedure ListFlights; virtual;
 	procedure NewFlight; virtual;
 	procedure FindFlight; virtual;
 	procedure AddFlightAction; virtual;
-        procedure FindFlightAction; virtual;
+    procedure FindFlightAction; virtual;
 	procedure HandleEvent(var Event: TEvent); virtual;
 	constructor Init;
 end;
@@ -34,58 +35,38 @@ type
 end;
 type
 	PFlight = ^TFlight;
- TFlight = object(TObject)
-  Id, Price, Frompoint, Topoint, Date, Time: PShortString;
-  Constructor Init(i, p, f, t, d, tm: String);
-  destructor Done; virtual;
-  constructor Load(S:TDosStream);
-  procedure Store(S:TDosStream);
-end;
-const
-RFlight: TStreamRec =(
-	ObjType: 151;
-	VmtLink: Ofs(TypeOf(TFlight)^);
-	Load: @TFlight.Load;
-	Store: @TFlight.Store);
-
-Constructor TFlight.Init(i, p, f, t, d, tm: String);
-begin
-     Id:= NewStr(i);
-     Price:= NewStr(p);
-     Frompoint:= NewStr(f);
-     Topoint:= NewStr(t);
-     Date:= NewStr(d);
-     Time:= NewStr(tm);
-end;
- 
-constructor TFlight.Load(S:TDosStream);
-begin
-	Id := S.ReadStr;
-	Price := S.ReadStr;
-	Frompoint := S.ReadStr;
-	Topoint := S.ReadStr;
-	Date := S.ReadStr;
-	Time := S.ReadStr;
-end;
- 
-procedure TFlight.Store(S:TDosStream);
-begin
-	S.Write(Id, sizeof(id));
-	S.Write(Price, sizeof(price));
-	S.Write(Frompoint, sizeof(frompoint));
-	S.Write(Topoint, sizeof(topoint));
-	S.Write(Date, sizeof(date));
-	S.Write(Time, sizeof(time));
-end;
-destructor TFlight.Done;
-begin
-	dispose(Id);
-	dispose(Price);
-	dispose(FromPoint);
-	dispose(ToPoint);
-	dispose(Date);
-	dispose(Time);
-end;
+	TFlight = record
+		// Id: integer;
+		// Price: integer;
+		// FromPoint: string;
+		// ToPoint: string;
+		// Date: string;
+		// Time: string;
+		Id, Price, FromPoint, ToPoint, Date, Time: String[8];
+	end;
+	PFlightObj = ^TFlightObj;
+	TFlightObj = object(TObject)
+		Data: TFlight;
+		Constructor Load(var S: TDosStream);
+		procedure Store(var S: TDosStream);
+	end;
+const RFlightObj: TStreamRec = ( 
+		ObjType: 15000;
+		VmtLink: Ofs(TypeOf(TFlightObj)^); 
+		Load: @TFlightObj.Load; 
+		Store: @TFlightObj.Store;
+		// Next: Word;
+		); 
+constructor TFlightObj.Load(var S: TDosStream); 
+	begin 
+		inherited init; 
+		S.Read(Data, SizeOf(Data)); 
+	end; 
+procedure TFlightObj.Store(var S: TDosStream); 
+	begin 
+		inherited init;
+		S.Write(Data, SizeOf(Data)); 
+	end;
 type
         FindData = record
                 Field: integer;
@@ -106,7 +87,6 @@ var
         Find: FindData;
         Add: AddData;
         SaveFile: TDosStream;
-        FlightCollection: PCollection;
 procedure TMyAppl.InitStatusLine;
 	var R: TRect;                 { хранит границы строки статуса }
 	begin
@@ -146,23 +126,46 @@ procedure TMyAppl.InitMenuBar;
 	end;
 constructor TMyAppl.Init;
 var f:text;
+	Buf: TBufStream;
+	test: PFlight;
+	DataPos: word;
 	begin
 		inherited Init;
-		RegisterType(RCollection);
-		 RegisterType(RFlight);
-		 assign(f,'data.txt');
-		 rewrite(f);
-		 system.close(f);
-		 FlightCollection := new(PCollection,Init(10,6));
-		 FlightCollection^.Insert(New(PFlight,Init('1','2','3','4','5','6')));
-		 SaveFile.Init('data.txt',stOpenRead);
-		 FlightCollection := PCollection(SaveFile.Get);
-		 SaveFile.Done;
-		 if SaveFile.Status <> 0 then
-		  begin
-		  SaveFile.Init('data.txt',stCreate);
-		  SaveFile.Done;
-		  end;
+		MessageBox ('asdasd', nil, mfOkButton); 
+		RegisterType(RFlightObj);
+		FlightCollection := New(PCollection, Init(100, 10));
+		test:= new(PFlight);
+		test^.Id := '1';
+		test^.Price := '1';
+		test^.FromPoint := '1';
+		test^.ToPoint := '1';
+		test^.Date := '1';
+		test^.Time := '1';
+		FlightCollection^.Insert(test);
+		// PFlightObj(FlightCollection^.At(DataPos))^.Data := test^;
+		Buf.Init('data.txt', stOpenWrite, 1024);
+		Buf.Put(FlightCollection);
+		Buf.Done;
+		// Buf.Init('data.txt', stOpenRead, 1024);
+		//    FlightCollection := PCollection(Buf.Get);
+		//    Buf.Done;
+
+		 // test := PFlightObj(FlightCollection^.At(DataPos))^.Data;
+		// RegisterType(RCollection);
+		 // RegisterType(RFlight);
+		 // assign(f,'data.txt');
+		 // rewrite(f);
+		 // system.close(f);
+		 // FlightCollection := new(PCollection,Init(10,6));
+		 // FlightCollection^.Insert(New(PFlight,Init('1','2','3','4','5','6')));
+		 // SaveFile.Init('data.txt',stOpenRead);
+		 // FlightCollection := PCollection(SaveFile.Get);
+		 // SaveFile.Done;
+		 // if SaveFile.Status <> 0 then
+		  // begin
+		  // SaveFile.Init('data.txt',stCreate);
+		  // SaveFile.Done;
+		  // end;
                 with Find do
   begin
     Field := 0;
@@ -262,13 +265,13 @@ var
 		FlightList: PListWindow;
 		R:TRect;
 		f: text;
-	    procedure PrintFlight(P: PFlight); far;
-	    begin
-	     with P^ do
-	      writeln(f,id^+' '+Date^+' '+Time^+' '+Price^+' '+FromPoint^+' '+ToPoint^);
-	    end;
+	    // procedure PrintFlight(P: PFlight); far;
+	    // begin
+	    //  with P^ do
+	    //   writeln(f,id^+' '+Date^+' '+Time^+' '+Price^+' '+FromPoint^+' '+ToPoint^);
+	    // end;
 	begin
-		FlightCollection^.ForEach(@PrintFlight);
+		// FlightCollection^.ForEach(@PrintFlight);
   		R.Assign(1, 1, 80, 25);
 		FlightList:=New(PListWindow, Init (R, 'Flight List', WnNoNumber)); {создание
 		окна:}
@@ -309,7 +312,7 @@ procedure TMyAppl.FindFlight;
 	end;
 procedure TMyAppl.AddFlightAction;
 begin
-        FlightCollection^.Insert(new(PFlight,Init('10',Add.Date,Add.Time,Add.Price,Add.Start,Add.Dest)));
+        // FlightCollection^.Insert(new(PFlight,Init('10',Add.Date,Add.Time,Add.Price,Add.Start,Add.Dest)));
 end;
 procedure TMyAppl.FindFlightAction;
 begin
