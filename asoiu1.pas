@@ -1,5 +1,5 @@
 Program FlightLIst;
-uses App, Objects, Views, Drivers, Menus, Dialogs, MsgBox;
+uses App, Objects, Views, Drivers, Menus, Dialogs, MsgBox, TextView;
 const
 	cmListFlights = 199;
 	cmAddDialog = 200;
@@ -15,13 +15,17 @@ type
 	procedure FindFlight; virtual;
 	procedure AddFlightAction; virtual;
     procedure FindFlightAction; virtual;
+    procedure printFlights; virtual;
 	procedure HandleEvent(var Event: TEvent); virtual;
 	constructor Init;
+        destructor Done; virtual;
 end;
 type
 	PListWindow = ^TListWindow;
 	TListWindow = object (TWindow)
-	constructor Init(Bounds: TRect; WinTitle: String; WinNo: Integer);
+          Term: PTerminal;
+          Buff: Text;
+	  constructor Init(Bounds: TRect; WinTitle: String; WinNo: Integer);
 end;
 type
 	PAddDialog = ^TAddDialog;
@@ -35,38 +39,55 @@ type
 end;
 type
 	PFlight = ^TFlight;
-	TFlight = record
-		// Id: integer;
-		// Price: integer;
-		// FromPoint: string;
-		// ToPoint: string;
-		// Date: string;
-		// Time: string;
-		Id, Price, FromPoint, ToPoint, Date, Time: String[8];
+	TFlight = object(TObject)
+		Id, Price, FromPoint, ToPoint, Date, Time: PString;
+		constructor Init(i, p, fp, tp, d, t: String);
+                procedure Load(S: TDosStream);
+                procedure Store(S: TDosStream);
+		destructor Done; virtual;
 	end;
-	PFlightObj = ^TFlightObj;
-	TFlightObj = object(TObject)
-		Data: TFlight;
-		Constructor Load(var S: TDosStream);
-		procedure Store(var S: TDosStream);
-	end;
-const RFlightObj: TStreamRec = ( 
-		ObjType: 15000;
-		VmtLink: Ofs(TypeOf(TFlightObj)^); 
-		Load: @TFlightObj.Load; 
-		Store: @TFlightObj.Store;
-		// Next: Word;
-		); 
-constructor TFlightObj.Load(var S: TDosStream); 
-	begin 
-		inherited init; 
-		S.Read(Data, SizeOf(Data)); 
-	end; 
-procedure TFlightObj.Store(var S: TDosStream); 
-	begin 
-		inherited init;
-		S.Write(Data, SizeOf(Data)); 
-	end;
+constructor TFlight.Init(i, p, fp, tp, d, t: String);
+begin
+	Id := NewStr(i);
+	Price := NewStr(p);
+	FromPoint := NewStr(fp);
+	ToPoint := NewStr(tp);
+	Date := NewStr(d);
+	Time := NewStr(t);
+end;
+procedure TFlight.Load(S: TDosStream);
+begin
+     Id := S.ReadStr;
+     Price := S.ReadStr;
+     FromPoint := S.ReadStr;
+     ToPoint := S.ReadStr;
+     Date := S.ReadStr;
+     Time := S.ReadStr;
+end;
+procedure TFlight.Store(S: TDosStream);
+begin
+     S.WriteStr(Id);
+     S.WriteStr(Price);
+     S.WriteStr(FromPoint);
+     S.WriteStr(ToPoint);
+     S.WriteStr(Date);
+     S.WriteStr(Time);
+end;
+destructor TFlight.Done;
+begin
+	dispose(Id);
+	dispose(Price);
+	dispose(FromPoint);
+	dispose(ToPoint);
+	dispose(Date);
+	dispose(Time);
+end;
+Const
+     RFlight: TStreamRec = (
+              ObjType: 2000;
+              VmtLink: Ofs(TypeOf(TFlight)^);
+              Load: @TFlight.Load;
+              Store: @TFlight.Store);
 type
         FindData = record
                 Field: integer;
@@ -88,21 +109,21 @@ var
         Add: AddData;
         SaveFile: TDosStream;
 procedure TMyAppl.InitStatusLine;
-	var R: TRect;                 { хранит границы строки статуса }
+	var R: TRect;
 	begin
-		GetExtent(R);               { устанавливает R в координаты всего}
-																{ экрана }
-		R.A.Y := R.B.Y - 1;         { передвигает вершину на 1 строку }
-																{ выше нижней }
-		StatusLine := New(PStatusLine, Init(R,   { создает строку }
-																						 { статуса }
-			NewStatusDef(0, $FFFF,  { устанавливает диапазон контекстного }
-															{ Help }
-				NewStatusKey('~Alt-X~ Exit', kbAltX, cmQuit, { определяет элемент }
-	//      NewStatusKey('~F4~ New', kbF4, cmAddDialog,
-				NewStatusKey('~Alt-F3~ Close', kbAltF3, cmClose,  { другой }
-				nil)),           { больше нет клавиш }
-			nil)               { больше нет определений }
+		GetExtent(R);
+
+		R.A.Y := R.B.Y - 1;
+
+		StatusLine := New(PStatusLine, Init(R,
+
+			NewStatusDef(0, $FFFF,
+
+				NewStatusKey('~Alt-X~ Exit', kbAltX, cmQuit,
+
+				NewStatusKey('~Alt-F3~ Close', kbAltF3, cmClose,
+				nil)),
+			nil)
 		));
 	end;
 procedure TMyAppl.InitMenuBar;
@@ -110,62 +131,37 @@ procedure TMyAppl.InitMenuBar;
 	begin
 		GetExtent(R);
 		R.B.Y := R.A.Y + 1;
-		MenuBar := New(PMenuBar, Init(R, NewMenu( { создать полосу с
-																								 меню }
-			 NewSubMenu('~F~lights', hcNoContext, NewMenu(    { определить
-																											 меню }
+		MenuBar := New(PMenuBar, Init(R, NewMenu(
+
+			 NewSubMenu('~F~lights', hcNoContext, NewMenu(
+
 				NewItem('List(refresh) flights', 'F3', kbF3, cmListFlights, hcNoContext,
 				NewItem('New flight', 'F4', kbF4, cmAddDialog, hcNoContext,
 				NewItem('Find flight', 'F5', kbF5, cmSearchDialog, hcNoContext,
 				NewLine(
 				NewItem('E~x~it', 'Alt-X', kbAltX, cmQuit, hcNoContext,
-																									 { элемент }
-				nil)))))),          { больше нет элементов }
-			nil)              { больше нет подменю }
-		)));                { конец полосы }
+
+				nil)))))),
+			nil)
+		)));
 	end;
 constructor TMyAppl.Init;
 var f:text;
-	Buf: TBufStream;
-	test: PFlight;
-	DataPos: word;
 	begin
 		inherited Init;
-		MessageBox ('asdasd', nil, mfOkButton); 
-		RegisterType(RFlightObj);
-		FlightCollection := New(PCollection, Init(100, 10));
-		test:= new(PFlight);
-		test^.Id := '1';
-		test^.Price := '1';
-		test^.FromPoint := '1';
-		test^.ToPoint := '1';
-		test^.Date := '1';
-		test^.Time := '1';
-		FlightCollection^.Insert(test);
-		// PFlightObj(FlightCollection^.At(DataPos))^.Data := test^;
-		Buf.Init('data.txt', stOpenWrite, 1024);
-		Buf.Put(FlightCollection);
-		Buf.Done;
-		// Buf.Init('data.txt', stOpenRead, 1024);
-		//    FlightCollection := PCollection(Buf.Get);
-		//    Buf.Done;
-
-		 // test := PFlightObj(FlightCollection^.At(DataPos))^.Data;
-		// RegisterType(RCollection);
-		 // RegisterType(RFlight);
-		 // assign(f,'data.txt');
-		 // rewrite(f);
-		 // system.close(f);
-		 // FlightCollection := new(PCollection,Init(10,6));
-		 // FlightCollection^.Insert(New(PFlight,Init('1','2','3','4','5','6')));
-		 // SaveFile.Init('data.txt',stOpenRead);
-		 // FlightCollection := PCollection(SaveFile.Get);
-		 // SaveFile.Done;
-		 // if SaveFile.Status <> 0 then
-		  // begin
-		  // SaveFile.Init('data.txt',stCreate);
-		  // SaveFile.Done;
-		  // end;
+                RegisterType(RFlight);
+		MessageBox ('Start', nil, mfOkButton);
+                SaveFile.Init('Flights.res', stOpenRead);
+                FlightCollection := PCollection(SaveFile.Get);
+                if SaveFile.Status <> stOk then
+                begin
+                    SaveFile.Done;
+                    SaveFile.Init('Flight.res', stCreate);
+                    FlightCollection := New(PCollection, Init(10, 5));
+                    FlightCollection^.Insert(New(PFlight, Init('1','2','3','4','5','6')));
+                end;
+                SaveFile.Done;
+		MessageBox ('Running', nil, mfOkButton);
                 with Find do
   begin
     Field := 0;
@@ -180,67 +176,94 @@ var f:text;
                 Dest:= '44';
   end;
 	end;
+procedure TMyAppl.printFlights;
+var
+	F: text;
+	procedure printFlight(P: PFlight); far;
+	begin
+                Assign(F, 'DATA.TXT');
+		With P^ do
+		writeln(f, Id^+' '+Price^+' '+FromPoint^+' '+ToPoint^+' '+Date^+' '+Time^);
+	end;
+begin
+	FlightCollection^.ForEach(@printFlight);
+	Close(F);
+end;
 constructor TListWindow.Init (Bounds: TRect; WinTitle: String; WinNo: Integer);
 	var
-	Scroll: PScroller; HSB, VSB: PScrollBar;
+	HSB, VSB: PScrollBar;
+        F: text;
+        temp: string;
 	begin
-		TWindow.Init (Bounds,WinTitle, WinNo); {вызов конструктора предка}
-		VSB := StandardScrollBar (sbVertical); {вертикаль. полоса скроллинга}
-		HSB := StandardScrollBar(sbHorizontal); {горизонт. полоса скроллинга}
-		GetExtent(Bounds); {Bonds - в границы окна}
-		Bounds.Grow(-1,-1); {уменьшить на 1 со всех сторон}
-		Scroll := New(PScroller, Init (Bounds, HSB, VSB)); {создание скроллера}
-		Insert (Scroll); {вставка в окно}
+		TWindow.Init (Bounds,WinTitle, WinNo);
+		VSB := StandardScrollBar (sbVertical);
+		HSB := StandardScrollBar(sbHorizontal);
+		GetExtent(Bounds);
+		Bounds.Grow(-1,-1);
+                New(Term, Init(Bounds, HSB, VSB, 50000));
+                {SaveFile.Init('Data.txt', stCreate);
+                SaveFile.Done;}
+                Assign(F, 'Data.txt');
+                Reset(F);
+                AssignDevice(Buff, Term);
+                Rewrite(Buff);
+                while not eof(F) do
+                begin
+                     Read(F, temp);
+                     Writeln(Buff, temp);
+                end;
+                Insert(Term);
+                system.close(F);
 	end;
 constructor TAddDialog.Init (var Bounds: TRect; WinTitle: String);
 var
         R: TRect; B: PView;
         FieldWidth: integer;
 begin
-inherited Init (Bounds,WinTitle); {вызов конструктора предка}
+inherited Init (Bounds,WinTitle);
 FieldWidth := (Bounds.B.X - Bounds.A.X) div 2 - 3;
 
-R.Assign(3,2,FieldWidth,3); {координаты строки ввода}
-B:=New(PInputLine,Init(R,128)); {создание строки ввода}
-Insert(B); {вставка строки ввода}
-R.Assign(3,1,FieldWidth,2); {координаты метки}
-Insert(New(PLabel,Init(R,'Date',B))); {создание и вставка метки}
+R.Assign(3,2,FieldWidth,3);
+B:=New(PInputLine,Init(R,128));
+Insert(B);
+R.Assign(3,1,FieldWidth,2);
+Insert(New(PLabel,Init(R,'Date',B)));
 
-R.Assign(3,5,FieldWidth,6); {координаты строки ввода}
-B:=New(PInputLine,Init(R,128)); {создание строки ввода}
-Insert(B); {вставка строки ввода}
-R.Assign(3,4,FieldWidth,5); {координаты метки}
-Insert(New(PLabel,Init(R,'Time',B))); {создание и вставка метки}
+R.Assign(3,5,FieldWidth,6);
+B:=New(PInputLine,Init(R,128));
+Insert(B);
+R.Assign(3,4,FieldWidth,5);
+Insert(New(PLabel,Init(R,'Time',B)));
 
-R.Assign(3,8,FieldWidth,9); {координаты строки ввода}
-B:=New(PInputLine,Init(R,128)); {создание строки ввода}
-Insert(B); {вставка строки ввода}
-R.Assign(3,7,FieldWidth,8); {координаты метки}
-Insert(New(PLabel,Init(R,'Price',B))); {создание и вставка метки}
+R.Assign(3,8,FieldWidth,9);
+B:=New(PInputLine,Init(R,128));
+Insert(B);
+R.Assign(3,7,FieldWidth,8);
+Insert(New(PLabel,Init(R,'Price',B)));
 
-R.Assign(FieldWidth + 5,2,FieldWidth * 2 + 2,3); {координаты строки ввода}
-B:=New(PInputLine,Init(R,128)); {создание строки ввода}
-Insert(B); {вставка строки ввода}
-R.Assign(FieldWidth + 5,1,FieldWidth * 2 + 2,2); {координаты метки}
-Insert(New(PLabel,Init(R,'Start',B))); {создание и вставка метки}
+R.Assign(FieldWidth + 5,2,FieldWidth * 2 + 2,3);
+B:=New(PInputLine,Init(R,128));
+Insert(B);
+R.Assign(FieldWidth + 5,1,FieldWidth * 2 + 2,2);
+Insert(New(PLabel,Init(R,'Start',B)));
 
-R.Assign(FieldWidth + 5,5,FieldWidth * 2 + 2,6); {координаты строки ввода}
-B:=New(PInputLine,Init(R,128)); {создание строки ввода}
-Insert(B); {вставка строки ввода}
-R.Assign(FieldWidth + 5,4,FieldWidth * 2 + 2,5); {координаты метки}
-Insert(New(PLabel,Init(R,'Destination',B))); {создание и вставка метки}
+R.Assign(FieldWidth + 5,5,FieldWidth * 2 + 2,6);
+B:=New(PInputLine,Init(R,128));
+Insert(B);
+R.Assign(FieldWidth + 5,4,FieldWidth * 2 + 2,5);
+Insert(New(PLabel,Init(R,'Destination',B)));
 
-R.Assign(15,10,25,12); {координаты командной кнопки}
- {создание и вставка кнопки}
+R.Assign(15,10,25,12);
+
 Insert(New (PButton, Init (R, '~A~dd Flight', cmOk, bfDefault)));
 
 end;
 constructor TFindDialog.Init (var Bounds: TRect; WinTitle: String);
 var R: TRect; B: PView;
 begin
-inherited Init (Bounds,WinTitle); {вызов конструктора предка}
-R.Assign(3,3,30,9); {координаты кластера кнопок}
-B:= New (PRadioButtons, Init (R, {создание кластера кнопок}
+inherited Init (Bounds,WinTitle);
+R.Assign(3,3,30,9);
+B:= New (PRadioButtons, Init (R,
  NewSItem ('Id',
  NewSItem ('Starting location',
  NewSItem ('Destination',
@@ -248,14 +271,14 @@ B:= New (PRadioButtons, Init (R, {создание кластера кнопок
  NewSItem ('Time',
  NewSItem ('Price',
  Nil))))))));
-Insert(B); {вставка кластера кнопок}
-R.Assign(3,1,10,2); {координаты метки}
-Insert(New(PLabel,Init(R,'Field',B))); {создание и вставка метки}
-R.Assign(3,10,30,11); {координаты строки ввода}
-B:=New(PInputLine,Init(R,128)); {создание строки ввода}
-Insert(B); {вставка строки ввода}
-R.Assign(8,12,26,14); {координаты командной кнопки}
- {создание и вставка кнопки}
+Insert(B);
+R.Assign(3,1,10,2);
+Insert(New(PLabel,Init(R,'Field',B)));
+R.Assign(3,10,30,11);
+B:=New(PInputLine,Init(R,128));
+Insert(B);
+R.Assign(8,12,26,14);
+
 Insert(New (PButton, Init (R, '~F~ind', cmOk, bfDefault)));
 
 end;
@@ -265,17 +288,11 @@ var
 		FlightList: PListWindow;
 		R:TRect;
 		f: text;
-	    // procedure PrintFlight(P: PFlight); far;
-	    // begin
-	    //  with P^ do
-	    //   writeln(f,id^+' '+Date^+' '+Time^+' '+Price^+' '+FromPoint^+' '+ToPoint^);
-	    // end;
 	begin
-		// FlightCollection^.ForEach(@PrintFlight);
-  		R.Assign(1, 1, 80, 25);
-		FlightList:=New(PListWindow, Init (R, 'Flight List', WnNoNumber)); {создание
-		окна:}
-		DeskTop^.Insert(FlightList); {вставка в панель экрана}
+		R.Assign(1, 1, 80, 24);
+		FlightList:=New(PListWindow, Init (R, 'Flight List', WnNoNumber));
+
+		DeskTop^.Insert(FlightList);
 end;
 procedure TMyAppl.NewFlight;
 	var
@@ -288,9 +305,10 @@ procedure TMyAppl.NewFlight;
 		Dialog := New(PAddDialog, Init(R, 'Add Flight'));
 		Dialog^.SetData(Add);
                 Control := DeskTop^.ExecView(Dialog);
-                if Control <> cmCancel then begin
+                if Control = cmOk then begin
                         Dialog^.GetData(Add);
-                        TMyAppl.AddFlightAction;
+                        FlightCollection^.Insert(New(PFlight, Init(
+                        '1', Add.Price, Add.Start, Add.Dest, Add.Date, Add.Time)));
                 end;
 	end;
 procedure TMyAppl.FindFlight;
@@ -312,11 +330,18 @@ procedure TMyAppl.FindFlight;
 	end;
 procedure TMyAppl.AddFlightAction;
 begin
-        // FlightCollection^.Insert(new(PFlight,Init('10',Add.Date,Add.Time,Add.Price,Add.Start,Add.Dest)));
+
 end;
 procedure TMyAppl.FindFlightAction;
 begin
-    
+
+end;
+destructor TMyAppl.Done;
+begin
+     {inherited Done;}
+     SaveFile.Init('Client.res', stOpenWrite);
+     SaveFile.Put(FlightCollection);
+     SaveFile.Done;
 end;
 
 procedure TMyAppl.HandleEvent(var Event: TEvent);
@@ -335,7 +360,7 @@ procedure TMyAppl.HandleEvent(var Event: TEvent);
 		end;
 	end;
 	begin
-		FlightAppl.Init();
+		FlightAppl.Init;
 		FlightAppl.Run;
 		FlightAppl.Done;
 	end.
